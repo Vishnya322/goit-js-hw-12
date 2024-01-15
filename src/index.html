@@ -5,20 +5,23 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vanilla App Template</title>
-    <link rel="stylesheet" href="./css/styles.css" />
+    
+    <link rel="stylesheet" href="./css/styles.css"/>
   </head>
   <body>
-    <load ="partials/header.html" />
-
-    <section>
-      <h1>Lorem ipsum dolor sit amet.</h1>
-      <!-- Path to images as from index.html file -->
-      <img src="./img/javascript.svg" alt="" />
-    </section>
-
-    <!-- Loads the specified .html file -->
-    <load ="partials/vite-promo.html" />
-
+    <div class="search-form">
+      <form class="search-form-id" id="form">
+       <input id="input" class="search-in" type="text" placeholder="Search images..." />
+      <button class="btn-search" type="submit">Search</button>
+     </form>
+     <span class="loader" style="display: none;"></span>
+     <section class="gallery" id="gallery">
+     <!-- <ul class="gallery-items"></ul> -->
+     </section>
+     <button class="btn-load-more" type="submit" style="display: none;">Load more</button>
+     <span class="loader" style="display: none;"></span>
+     </div>
+     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script type="module" src="./main.js"></script>
   </body>
 </html>
