@@ -10,10 +10,10 @@ const input = document.getElementById('input');
 const btnLoadMore = document.querySelector('.btn-load-more');
 const loader = document.querySelector('.loader');
 
-
+let prevSearchTerm = '';
 const paramsInfo = {
   key: "41508094-b690cca5e0d97ff8185874dce",
-  q: "kat",
+  q: " ",
   image_type: "photo",
   orientation: "horizontal",
   safesearch: "true",
@@ -25,6 +25,15 @@ let page = paramsInfo.page;
 let per_page = paramsInfo.per_page;
 let totalHits;
 
+const lightbox = new SimpleLightbox('.gallery a', {
+  nav: true,
+  captionDelay: 250,
+  captionData: 'alt',
+  close: true,
+  enableKeyboard: true,
+  docClose: true,
+});
+
 form.addEventListener('submit', event => {
   event.preventDefault();
   const searchTerm = input.value.trim();
@@ -32,7 +41,11 @@ form.addEventListener('submit', event => {
   paramsInfo.q = searchTerm;
   paramsInfo.page = 1;
   paramsInfo.per_page = per_page;
-  
+
+  gallery.innerHTML = '';
+  uniqueImages.length = 0;
+  prevSearchTerm = searchTerm;
+
   searchImg();
   showLoader()
   showLoadMore()
@@ -44,32 +57,40 @@ form.addEventListener('submit', event => {
 }
 });
 
+
 btnLoadMore.addEventListener('click', event => {
   event.preventDefault();
-  showLoader();
   const searchTerm = input.value.trim();
 
-  if (searchTerm) {
-  paramsInfo.q = searchTerm;
-  paramsInfo.page += 1;
-  paramsInfo.per_page = per_page; 
-  searchImg();
-} else {
-  iziToast.info({
-    position: 'bottomCenter',
-    message: "Please enter a search term.",
-  });
-}
+  if (prevSearchTerm) {
+    showLoader();
+    paramsInfo.q = prevSearchTerm; 
+    paramsInfo.page += 1;
+    paramsInfo.per_page = per_page; 
+    searchImg();
+  } else {
+    iziToast.info({
+      position: 'bottomCenter',
+      message: "Please enter a search term.",
+    });
+  }
 });
 
-async function fetchViews(url) {
-  const response = await fetch(url);
 
-  if (!response.ok) {
-    throw new Error("Sorry, there are no images matching your search query. Please try again!");
+async function fetchImagesData(url) {
+  try {
+    const response = await axios.get(url);
+    const { data } = response;
+    if (data.total === 0) {
+      throw new Error("Sorry, there are no images matching your search query. Please try again!");
+    }
+    return data;
+  } catch (error) {
+    throw new Error("Failed to fetch images data. Please try again!");
   }
-  return response.json();
 }
+
+const uniqueImages = [];
 
 async function searchImg() {
   const url = new URL("https://pixabay.com/api/");
@@ -77,8 +98,7 @@ async function searchImg() {
    url.search = searchParams.toString();
 
   try {
-    paramsInfo.page = page;
-    const { hits, totalHits: hitsCount } = await fetchViews(url, paramsInfo);
+    const { hits, totalHits: hitsCount } = await fetchImagesData(url, paramsInfo);
     totalHits = hitsCount;  
     
     if (hits.length === 0) {
@@ -89,7 +109,9 @@ async function searchImg() {
         message: "We're sorry, but there are no results matching your search criteria.",
       });
     } else {
-    const renderImg = hits.reduce((html, hit) => {
+      const uniqueHits = hits.filter(hit => !uniqueImages.includes(hit.webformatURL));
+      uniqueImages.push(...uniqueHits.map(hit => hit.webformatURL));            
+      const renderImg = uniqueHits.reduce((html, hit) => {
       return (
         html +
             `<li class="gallery-item">
@@ -109,48 +131,47 @@ async function searchImg() {
             </li>`
             );
         }, "");
+        
     gallery.innerHTML += renderImg;
-
-    const lightbox = new SimpleLightbox('.gallery a', {
-      nav: true,
-      captionDelay: 250,
-      captionData: 'alt',
-      close: true,
-      enableKeyboard: true,
-      docClose: true,
-  });
-
+  
   lightbox.refresh();
   
-  if (gallery.querySelector('.gallery-item')) {
-    const cardHeight = gallery.querySelector('.gallery-item').getBoundingClientRect().height;
+const galleryItem = gallery.querySelector('.gallery-item');
+if (galleryItem) {
+  const cardHeight = galleryItem.getBoundingClientRect().height;
 
-    if (hits.length < per_page || page * per_page >= totalHits) {
-      hideLoader();
-      hideLoadMore();
-      iziToast.info({
-        position: 'bottomCenter',
-        message: "We're sorry, but you've reached the end of search results.",
-      });
-    } else {
-      hideLoader();
-      showLoadMore();
-      const scrollDistance = 2 * cardHeight;
-      window.scrollBy({
-        top: scrollDistance,
-        behavior: 'smooth',
-      });
-    }
-  }
- }
-} catch (error) {
+if (hits.length < per_page || page * per_page >= totalHits) {
   hideLoader();
-  iziToast.error({
-    position: 'bottomCenter',
-    message: error.message,
-  });
- }
+  hideLoadMore();
+
+if (totalHits === gallery.querySelectorAll('.gallery-item').length) {
+    
+    hideLoadMore();
   }
+  iziToast.info({
+    position: 'bottomCenter',
+    message: "We're sorry, but you've reached the end of search results.",
+  });
+  
+} else {
+  hideLoader();
+  showLoadMore();
+  const scrollDistance = 2 * cardHeight;
+  window.scrollBy({
+    top: scrollDistance,
+    behavior: 'smooth',
+   });
+  }
+ }
+}
+} catch (error) {
+hideLoader();
+iziToast.error({
+position: 'bottomCenter',
+message: error.message,
+});
+}
+}
 
 function showLoader() {
 const loader = document.querySelector('.loader');
